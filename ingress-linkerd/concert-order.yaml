@@ -1,0 +1,285 @@
+##################################################################################################
+# User service
+##################################################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-config
+data:
+  config.json: |-
+    {
+      "service_endpoint": "0.0.0.0:8180",
+      "dbname": "demo",
+      "user": "demo",
+      "password": "pass",
+      "dbendpoint": "mysql.default:3306",
+      "booking_service_addr": "booking.default",
+      "concert_service_addr": "concert.default"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-v1
+  labels:
+    app: user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: user
+        version: v1
+    spec:
+      containers:
+      - name: user
+        image: zhanyang/user:1.0
+        ports:
+        - containerPort: 8180
+        args:
+        - "/app/user"
+        - "-c"
+        - "/etc/user/config.json"
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: http_proxy
+          value: $(HOST_IP):4140
+        livenessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8180
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        volumeMounts:
+        - name: user-config
+          mountPath: /etc/user
+          readOnly: true
+      volumes:
+      - name: user-config
+        configMap:
+          name: user-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-v2
+  labels:
+    app: user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: user
+        version: v2
+    spec:
+      containers:
+      - name: user
+        image: zhanyang/user:2.0
+        ports:
+        - containerPort: 8180
+        args:
+        - "/app/user"
+        - "-c"
+        - "/etc/user/config.json"
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: http_proxy
+          value: $(HOST_IP):4140
+        livenessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8180
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        volumeMounts:
+        - name: user-config
+          mountPath: /etc/user
+          readOnly: true
+      volumes:
+      - name: user-config
+        configMap:
+          name: user-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user
+spec:
+  selector:
+    app: user
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8180
+---
+##################################################################################################
+# Booking service
+##################################################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: booking-config
+data:
+  config.json: |-
+    {
+      "service_endpoint": "0.0.0.0:8181",
+      "dbname": "demo",
+      "user": "demo",
+      "password": "pass",
+      "dbendpoint": "mysql.default:3306",
+      "concert_service_addr": "concert.default"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-v1
+  labels:
+    app: booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: booking
+        version: v1
+    spec:
+      containers:
+      - name: booking
+        image: zhanyang/booking:1.0
+        ports:
+        - containerPort: 8181
+        args:
+        - "/app/booking"
+        - "-c"
+        - "/etc/booking/config.json"
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: http_proxy
+          value: $(HOST_IP):4140
+        livenessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8181
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        volumeMounts:
+        - name: booking-config
+          mountPath: /etc/booking
+          readOnly: true
+      volumes:
+      - name: booking-config
+        configMap:
+          name: booking-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking
+spec:
+  selector:
+    app: booking
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8181
+---
+##################################################################################################
+# Concert service
+##################################################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: concert-config
+data:
+  config.json: |-
+    {
+      "service_endpoint": "0.0.0.0:8182",
+      "dbname": "demo",
+      "user": "demo",
+      "password": "pass",
+      "dbendpoint": "mysql.default:3306"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: concert-v1
+  labels:
+    app: concert
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: concert
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: concert
+        version: v1
+    spec:
+      containers:
+      - name: concert
+        image: zhanyang/concert:1.0
+        ports:
+        - containerPort: 8182
+        args:
+        - "/app/concert"
+        - "-c"
+        - "/etc/concert/config.json"
+        env:
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: http_proxy
+          value: $(HOST_IP):4140
+        livenessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8182
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        volumeMounts:
+        - name: concert-config
+          mountPath: /etc/concert
+          readOnly: true
+      volumes:
+      - name: concert-config
+        configMap:
+          name: concert-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: concert
+spec:
+  selector:
+    app: concert
+  clusterIP: None
+  ports:
+  - name: http
+    port: 8182
